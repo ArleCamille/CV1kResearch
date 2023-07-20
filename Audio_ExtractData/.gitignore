@@ -5,6 +5,7 @@ out/*
 *.mp2
 *.exe
 *.txt
+__pycache__
 
 # Tracked elsewhere
 swap.py
