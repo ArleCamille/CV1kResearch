@@ -1,16 +1,27 @@
-This doc is just notes to self. For proper desc of header differences, look at mpeg_audio.cpp in mame
+The audio format used by CV1000 is called YAMAHA AMM (AMusement Machine compression), which reuses the
+MPEG packet frame format but uses a significantly different header structure from the vanilla MP2.
 
-# AMM header
-# 0:4 full_packets_count = 12
-# 4:6 srate_index = 2
-# 6:8 last_packet_frame_id = 0
-# 8:10 stereo_mode = 3 # Mono
-# 10:12 stereo_mode_ext = 0
-# 12:15 param_index = 4
-# 16 reserved = 0
-#
-# sampling_rate = 2 + 4 * layer25(?) = 2 or 6 (probably 6)
-# last_frame_number = 3*12 + 0 = 36
+The header for a YAMAHA AMM consists of the following:
+AAAAAAAA AAAABCCX DDDDEEFF GGHHIIIJ
+- A (12 bits): sync word. Like the vanilla MP2, it should always be 1.
+- B (1 bit): AFAIK it seems to act like the vanilla MP2 version code, for which 1 is MPEG1 and 2 is MPEG2.
+             MAME notes B=0 as MPEG 2.5, but judging from the sampling rate table, it is actually MPEG2.
+- C (2 bits): MPEG layer. Like vanilla MP2, 01=L3, 10=L2 and 11=L1.
+- X (1 bit): unused.
+- D (4 bits): number of "full packets" in the frame. AMM seems to further divide the frame into atoms
+              called "packets." D=0b1100 (12) means there are 36 small frames in the frame,
+              corresponding to 1152 samples in L2 and L3. (384 samples in L1? I dunno for this
+              combination.)
+- E (2 bits): sampling rate index. Same meaning as in the same layer of vanilla MP2.
+- F (2 bits): Additional small frames to pad the full packets.
+- G (2 bits): stereo mode. Same meaning as in MP2. (00: stereo, 01: joint stereo, 10: dual channel,
+              11: mono)
+- H (2 bits): stereo mode extension which only applies to E=01 (joint stereo).
+- I (3 bits): parameter index. This directly decides the "total band count" instead of relying on the
+              bitrate and sampling rate for quantization.
+
+There is nowhere which specifies the bitrate. Therefore, we cannot expect where the next frame lies.
+Perhaps we should instead directly decode the audio data to PCM?
 
 # MPEG2 header
 # b1 * 11 (sync)
